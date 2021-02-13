@@ -8,7 +8,7 @@
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from DroneClient import DroneConnect
-# from drone_msgs.msg import Diagnostics
+from drone_msgs.msg import Diagnostics
 from sensor_msgs.msg import NavSatStatus
 from enum import Enum
 
