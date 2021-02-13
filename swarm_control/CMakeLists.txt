@@ -5,7 +5,6 @@ add_compile_options(-std=c++11)
 
 ## Find catkin macros and libraries
 find_package(catkin REQUIRED COMPONENTS
-  drone_msgs
   geometry_msgs
   interactive_markers
   nav_msgs

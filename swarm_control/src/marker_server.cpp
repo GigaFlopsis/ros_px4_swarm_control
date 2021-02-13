@@ -1,17 +1,17 @@
 #include <ros/ros.h>
 #include <interactive_markers/interactive_marker_server.h>
 #include <visualization_msgs/Marker.h>
-#include <tf/transform_broadcaster.h>
 #include <tf/tf.h>
-#include <drone_msgs/Goal.h>
+#include <geometry_msgs/PoseStamped.h>
 
 using namespace visualization_msgs;
-using namespace drone_msgs;
+using namespace geometry_msgs;
 
 // Global variables
 boost::shared_ptr<interactive_markers::InteractiveMarkerServer> server;
 ros::Publisher goal_pub;
-Goal goal;
+
+PoseStamped goal;
 Marker marker_text;
 
 double getYawFromQuat(geometry_msgs::Quaternion quat)
@@ -24,22 +24,21 @@ double getYawFromQuat(geometry_msgs::Quaternion quat)
   return yaw;
 }
 
-
-void updateGoal(geometry_msgs::Pose pose)
+void updateGoal(const Pose &pose)
 {
-  goal.ctr_type = Goal::POSE;
-  goal.pose.point.x = pose.position.x;
-  goal.pose.point.y = pose.position.y;
-  goal.pose.point.z = pose.position.z;
-  goal.pose.course = getYawFromQuat(pose.orientation);
+  goal.pose = pose;
 }
 
 void processFeedback( const visualization_msgs::InteractiveMarkerFeedbackConstPtr &feedback )
 {
+
   updateGoal(feedback->pose);
   server->applyChanges();
-  goal_pub.publish(goal);
 
+  goal.header.frame_id = "map";
+  goal.header.stamp = ros::Time::now();
+  goal.pose = feedback->pose;
+  goal_pub.publish(goal);
 }
 
 Marker arrowMarker( InteractiveMarker &msg )
@@ -57,13 +56,14 @@ Marker arrowMarker( InteractiveMarker &msg )
   return marker;
 }
 
-Marker textMarker( Goal &msg )
+Marker textMarker(PoseStamped msg)
 {
 
-  std::string text_msg = "           x:" +std::to_string(msg.pose.point.x)+ "\n";
-              text_msg += "           y:" +std::to_string(msg.pose.point.y)+ "\n";
-              text_msg += "           z:" +std::to_string(msg.pose.point.z)+ "\n";
-              text_msg += "           yaw:" +std::to_string(goal.pose.course * 57.2958)+ "\n";
+  double yaw = getYawFromQuat(msg.pose.orientation);
+  std::string text_msg = "           x:" +std::to_string(msg.pose.position.x)+ "\n";
+              text_msg += "           y:" +std::to_string(msg.pose.position.y)+ "\n";
+              text_msg += "           z:" +std::to_string(msg.pose.position.z)+ "\n";
+              text_msg += "           yaw:" +std::to_string(yaw * 57.2958)+ "\n";
 
   float _scale = 0.08;
   marker_text.header.frame_id = "map";
@@ -74,11 +74,12 @@ Marker textMarker( Goal &msg )
   marker_text.scale.x = _scale;
   marker_text.scale.y = _scale;
   marker_text.scale.z = _scale;
-  marker_text.pose.position.x = msg.pose.point.x;
-  marker_text.pose.position.y = msg.pose.point.y;
-  marker_text.pose.position.z = msg.pose.point.z;
-
+  marker_text.pose.position = msg.pose.position;
   marker_text.pose.position.z += 0.15;
+  marker_text.pose.orientation.x = 0.;
+  marker_text.pose.orientation.y = 0.;
+  marker_text.pose.orientation.z = 0.;
+
   marker_text.pose.orientation.w = 1.;
 
   marker_text.color.r = 0.8;
@@ -125,16 +126,10 @@ void makeQuadrocopterMarker( const tf::Vector3& position)
   server->setCallback(int_marker.name, &processFeedback);
 }
 
-void goalUpdateCb(Goal goal_)
+void goalUpdateCb(const PoseStamped &goal_)
 {
   goal = goal_;
-  geometry_msgs::Pose pose;
-  pose.position.x = goal_.pose.point.x;
-  pose.position.y = goal_.pose.point.y;
-  pose.position.z = goal_.pose.point.z;
-  tf::Quaternion q = tf::createQuaternionFromYaw(goal_.pose.course);
-  tf::quaternionTFToMsg(q, pose.orientation);
-  server->setPose("goal_pose", pose);
+  server->setPose("goal_pose", goal.pose);
   server->applyChanges();
 }
 
@@ -144,10 +139,8 @@ int main(int argc, char** argv)
   // Init ROS node
   ros::init(argc, argv, "marker_server");
   ros::NodeHandle n;
-  goal_pub = n.advertise<Goal>("/goal_pose", 10);
-  ros::Publisher marker_text_pub = n.advertise<Marker>("/basix_controls/marker_text", 10);
 
-  ros::Subscriber goal_sub = n.subscribe("/goal_pose", 10, &goalUpdateCb);
+  goal.pose.orientation.w = 1.0;
 
   // Init marker server
   server.reset( new interactive_markers::InteractiveMarkerServer("basic_controls","",false) );
@@ -155,11 +148,17 @@ int main(int argc, char** argv)
   makeQuadrocopterMarker(tf::Vector3(0, 0, 0));
   server->applyChanges();
 
-  ros::Rate loop_rate(15);
+
+  goal_pub = n.advertise<PoseStamped>("/goal", 10);
+  ros::Publisher marker_text_pub = n.advertise<Marker>("/goal/marker_text", 10);
+  ros::Subscriber goal_sub = n.subscribe("/goal", 10, &goalUpdateCb);
+
+  ros::Rate loop_rate(10);
 
   while (ros::ok())
   {
       marker_text_pub.publish(textMarker(goal));
+//      goal_pub.publish(goal);
       ros::spinOnce();
       loop_rate.sleep();
   }
