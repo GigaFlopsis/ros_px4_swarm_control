@@ -7,7 +7,7 @@ from swarm_msgs.msg import FormationParam
 def create_virtual_structure(formation, angle=0.0, length=0., width=0.):
     """
     Функция виртуального построения
-    Virtual_formation - массив координат расположения РТП в строю
+    Virtual_formation - массив координат расположения q111111111111111111111111111111111111111111111111111111111111111111111111111111111qqqqqqqqqqqqqqqqqq  fccc в строю
     x0,y0 - координаты центра виртуального построения
     sizeBuild - размер построния (ширина Х глубина)
     :param formation.count: количество РТП

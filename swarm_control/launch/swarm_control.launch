@@ -1,17 +1,17 @@
 <launch>
 
 	<!-- start  marker_server_node -->
-	<node pkg="swarm_control" name="interactive_goals_node" type="marker_server" 	respawn="true" output="screen"/>
+	<node pkg="swarm_control" name="interactive_goals_node" type="marker_server" respawn="true" output="log"/>
 	<node pkg="swarm_control" name="swarm_marker_node" type="swarm_control.py" 	respawn="true" output="screen">
 		<param name="use_yaml" value="false"/>
 		<param name="path" value="$(find swarm_control)/param/config.yaml"/>
 		<param name="max_vel" value="0.5"/>
-		<param name="r_safe" value="1.5"/>
+		<param name="r_safe" value="1.0"/>
 	</node>
 	
-	<node pkg="swarm_control" name="swarm_contol_gui" type="swarm_contol_gui.py" 	respawn="true" output="screen">
-	</node>
+<!--	<node pkg="swarm_control" name="swarm_contol_gui" type="swarm_contol_gui.py" 	respawn="true" output="screen">-->
+<!--	</node>-->
 	<!--rviz-->
-	<node name="rviz" pkg="rviz" type="rviz" required="true"
+	<node name="rviz" pkg="rviz" type="rviz" required="true"  output="log"
 		args="-d $(find swarm_control)/rviz/rviz.rviz" />
 </launch>
